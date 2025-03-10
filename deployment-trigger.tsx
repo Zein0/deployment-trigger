@@ -64,15 +64,21 @@ export default function DeployPage() {
   // Add these new state variables after the existing useState declarations
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-
   // Add this function before the triggerDeployment function
   const verifyPassword = async (e: React.FormEvent) => {
     e.preventDefault()
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
 
-    if (password === process.env.DEPLOYMENT_PASSWORD) {
+    const data = await res.json();
+    if(data.success){
       setIsAuthenticated(true)
       toast.success("Authentication successful")
-    } else {
+    }
+    else{
       toast.error("Invalid password")
       setPassword("")
     }
