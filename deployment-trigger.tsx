@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Loader2, AlertTriangle } from "lucide-react"
-import { toast } from "sonner"
+import { toast, Toaster } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -74,6 +74,7 @@ export default function DeployPage() {
       toast.success("Authentication successful")
     } else {
       toast.error("Invalid password")
+      setPassword("")
     }
   }
 
@@ -186,6 +187,7 @@ export default function DeployPage() {
   // Replace the entire return statement with this code
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-muted/40">
+      <Toaster />
       {!isAuthenticated ? (
         <Card className="w-full max-w-md">
           <CardHeader>
@@ -195,6 +197,16 @@ export default function DeployPage() {
           <form onSubmit={verifyPassword}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <label htmlFor="username" className="sr-only text-sm font-medium">
+                Username
+                </label>
+                <input
+                  id="username"
+                  type="text"
+                  name="username"
+                  className="w-full px-3 py-2 border rounded-md hidden"
+                  autoComplete="username"
+                />
                 <label htmlFor="password" className="text-sm font-medium">
                   Password
                 </label>
