@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
@@ -59,28 +61,23 @@ export default function DeployPage() {
     success: boolean
   } | null>(null)
 
-  // Check cooldown status when portal or env changes, or periodically
-  useEffect(() => {
-    const checkCooldownStatus = async () => {
-      const status = await canDeploy(portal, env)
-      setCooldown({
-        inCooldown: !status.canDeploy,
-        remainingTime: status.remainingTime,
-      })
+  // Add these new state variables after the existing useState declarations
+  const [password, setPassword] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  // Add this function before the triggerDeployment function
+  const verifyPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // For security, we'll use a server-side check in a real app
+    // For this demo, we're checking against the environment variable directly
+    if (password === process.env.DEPLOYMENT_PASSWORD) {
+      setIsAuthenticated(true)
+      toast.success("Authentication successful")
+    } else {
+      toast.error("Invalid password")
     }
-
-    // Check immediately when portal or env changes
-    checkCooldownStatus()
-
-    // Set up interval to check every second if in cooldown
-    const interval = setInterval(() => {
-      if (cooldown.inCooldown) {
-        checkCooldownStatus()
-      }
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [portal, env, cooldown.inCooldown])
+  }
 
   const triggerDeployment = async () => {
     // Check if deployment is allowed
@@ -155,6 +152,29 @@ export default function DeployPage() {
     }
   }
 
+  // Check cooldown status when portal or env changes, or periodically
+  useEffect(() => {
+    const checkCooldownStatus = async () => {
+      const status = await canDeploy(portal, env)
+      setCooldown({
+        inCooldown: !status.canDeploy,
+        remainingTime: status.remainingTime,
+      })
+    }
+
+    // Check immediately when portal or env changes
+    checkCooldownStatus()
+
+    // Set up interval to check every second if in cooldown
+    const interval = setInterval(() => {
+      if (cooldown.inCooldown) {
+        checkCooldownStatus()
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [portal, env, cooldown.inCooldown])
+
   // Format remaining time for display
   const formatRemainingTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -165,102 +185,139 @@ export default function DeployPage() {
   // Calculate progress percentage for cooldown
   const cooldownProgress = cooldown.inCooldown ? 100 - (cooldown.remainingTime / (5 * 60)) * 100 : 100
 
+  // Replace the entire return statement with this code
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-muted/40">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Basma Deployment Trigger</CardTitle>
-          <CardDescription>Select a portal and environment to trigger a deployment</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="portal" className="text-sm font-medium">
-              Portal
-            </label>
-            <Select value={portal} onValueChange={setPortal}>
-              <SelectTrigger id="portal">
-                <SelectValue placeholder="Select portal" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cms">CMS</SelectItem>
-                <SelectItem value="shop">Shop</SelectItem>
-                <SelectItem value="clinic">Clinic</SelectItem>
-                <SelectItem value="doctor">Doctor</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="environment" className="text-sm font-medium">
-              Environment
-            </label>
-            <Select value={env} onValueChange={setEnv}>
-              <SelectTrigger id="environment">
-                <SelectValue placeholder="Select environment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dev">Development</SelectItem>
-                <SelectItem value="test">Testing</SelectItem>
-                <SelectItem value="prod">Production</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {env === "prod" && (
-            <Alert variant="destructive">
-              <AlertTitle>Warning</AlertTitle>
-              <AlertDescription>
-                You are about to trigger a production deployment. This will affect live users.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {cooldown.inCooldown && (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Deployment Cooldown</AlertTitle>
-              <AlertDescription>
-                This environment was recently deployed. Please wait {formatRemainingTime(cooldown.remainingTime)} before
-                deploying again.
-                <Progress value={cooldownProgress} className="mt-2" />
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {lastDeployment && (
-            <div className="text-sm border rounded-md p-3 bg-muted/50">
-              <p className="font-medium">Last deployment attempt:</p>
-              <p>
-                {PORTAL_NAMES[lastDeployment.portal as keyof typeof PORTAL_NAMES]} (
-                {ENV_NAMES[lastDeployment.env as keyof typeof ENV_NAMES]})
-              </p>
-              <p>{lastDeployment.timestamp}</p>
-              <p className={lastDeployment.success ? "text-green-600" : "text-red-600"}>
-                {lastDeployment.success ? "Successful" : "Failed"}
-              </p>
+      {!isAuthenticated ? (
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Deployment Authentication</CardTitle>
+            <CardDescription>Enter your password to access the deployment trigger</CardDescription>
+          </CardHeader>
+          <form onSubmit={verifyPassword}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  name="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full">
+                Login
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      ) : (
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Basma Deployment Trigger</CardTitle>
+            <CardDescription>Select a portal and environment to trigger a deployment</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="portal" className="text-sm font-medium">
+                Portal
+              </label>
+              <Select value={portal} onValueChange={setPortal}>
+                <SelectTrigger id="portal">
+                  <SelectValue placeholder="Select portal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cms">CMS</SelectItem>
+                  <SelectItem value="shop">Shop</SelectItem>
+                  <SelectItem value="clinic">Clinic</SelectItem>
+                  <SelectItem value="doctor">Doctor</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button
-            onClick={triggerDeployment}
-            disabled={isLoading || cooldown.inCooldown}
-            className="w-full"
-            variant={env === "prod" ? "destructive" : "default"}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Triggering...
-              </>
-            ) : cooldown.inCooldown ? (
-              <>Cooldown: {formatRemainingTime(cooldown.remainingTime)}</>
-            ) : (
-              <>{env === "prod" ? "Trigger Production Deployment" : "Trigger Deployment"}</>
+
+            <div className="space-y-2">
+              <label htmlFor="environment" className="text-sm font-medium">
+                Environment
+              </label>
+              <Select value={env} onValueChange={setEnv}>
+                <SelectTrigger id="environment">
+                  <SelectValue placeholder="Select environment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dev">Development</SelectItem>
+                  <SelectItem value="test">Testing</SelectItem>
+                  <SelectItem value="prod">Production</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {env === "prod" && (
+              <Alert variant="destructive">
+                <AlertTitle>Warning</AlertTitle>
+                <AlertDescription>
+                  You are about to trigger a production deployment. This will affect live users.
+                </AlertDescription>
+              </Alert>
             )}
-          </Button>
-        </CardFooter>
-      </Card>
+
+            {cooldown.inCooldown && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Deployment Cooldown</AlertTitle>
+                <AlertDescription>
+                  This environment was recently deployed. Please wait {formatRemainingTime(cooldown.remainingTime)}{" "}
+                  before deploying again.
+                  <Progress value={cooldownProgress} className="mt-2" />
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {lastDeployment && (
+              <div className="text-sm border rounded-md p-3 bg-muted/50">
+                <p className="font-medium">Last deployment attempt:</p>
+                <p>
+                  {PORTAL_NAMES[lastDeployment.portal as keyof typeof PORTAL_NAMES]} (
+                  {ENV_NAMES[lastDeployment.env as keyof typeof ENV_NAMES]})
+                </p>
+                <p>{lastDeployment.timestamp}</p>
+                <p className={lastDeployment.success ? "text-green-600" : "text-red-600"}>
+                  {lastDeployment.success ? "Successful" : "Failed"}
+                </p>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex flex-col gap-2">
+            <Button
+              onClick={triggerDeployment}
+              disabled={isLoading || cooldown.inCooldown}
+              className="w-full"
+              variant={env === "prod" ? "destructive" : "default"}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Triggering...
+                </>
+              ) : cooldown.inCooldown ? (
+                <>Cooldown: {formatRemainingTime(cooldown.remainingTime)}</>
+              ) : (
+                <>{env === "prod" ? "Trigger Production Deployment" : "Trigger Deployment"}</>
+              )}
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => setIsAuthenticated(false)}>
+              Logout
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
     </div>
   )
 }
