@@ -69,8 +69,6 @@ export default function DeployPage() {
   const verifyPassword = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // For security, we'll use a server-side check in a real app
-    // For this demo, we're checking against the environment variable directly
     if (password === process.env.DEPLOYMENT_PASSWORD) {
       setIsAuthenticated(true)
       toast.success("Authentication successful")
