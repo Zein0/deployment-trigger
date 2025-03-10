@@ -5,7 +5,6 @@ export async function POST(req) {
     const { password } = await req.json();
 
     const hashedPassword = process.env.DEPLOYMENT_PASSWORD;
-    console.log("hashedPassword", hashedPassword);
 
     if (!hashedPassword) {
       return new Response(JSON.stringify({ error: "Server error: password not set" }), { status: 500 });
